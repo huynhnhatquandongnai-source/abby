@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsup src/",
     "dev": "pnpm run build --watch",
-    "test": "vitest"
+    "test": "pnpm --filter @tryabby/core build && vitest"
   },
   "homepage": "https://docs.tryabby.com",
   "keywords": ["abby", "vue", "ab-testing", "feature-flags", "remote-config"],

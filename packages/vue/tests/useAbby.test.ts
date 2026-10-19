@@ -32,7 +32,7 @@ describe("useAbby", () => {
 
     const result = useAbby("test");
     expect(spy).toHaveBeenCalled();
-    expect(result.variant).toBeDefined();
+    expect(result.variant.value).toBeDefined();
   });
 
   it("should use the persistedValue", () => {
@@ -56,7 +56,7 @@ describe("useAbby", () => {
     const result = useAbby("test");
 
     expect(setSpy).not.toHaveBeenCalled();
-    expect(result.variant).toEqual(persistedValue);
+    expect(result.variant.value).toEqual(persistedValue);
   });
 
   it("looks up the selected variant in the lookup object", () => {
@@ -87,7 +87,7 @@ describe("useAbby", () => {
       TimsText: "d",
     });
 
-    expect(result.variant).toEqual("a");
+    expect(result.variant.value).toEqual("a");
   });
 
   it("should ping the current info on call", () => {
@@ -144,9 +144,9 @@ describe("useAbby", () => {
       },
     });
 
-    expect(useFeatureFlag("flag1")).toEqual(false);
-    expect(useFeatureFlag("flag2")).toEqual(true);
-    expect(useFeatureFlags()).toEqual([
+    expect(useFeatureFlag("flag1").value).toEqual(false);
+    expect(useFeatureFlag("flag2").value).toEqual(true);
+    expect(useFeatureFlags().value).toEqual([
       { name: "flag1", value: false },
       { name: "flag2", value: true },
     ]);
@@ -173,8 +173,8 @@ describe("useAbby", () => {
       currentEnvironment: "a",
     });
 
-    expect(useRemoteConfig("remoteConfig1")).toEqual("overwrittenValue");
-    expect(useRemoteConfig("unsetRemoteConfig")).toEqual("defaultValue");
-    expect(useRemoteConfigVariables()).toHaveLength(2);
+    expect(useRemoteConfig("remoteConfig1").value).toEqual("overwrittenValue");
+    expect(useRemoteConfig("unsetRemoteConfig").value).toEqual("defaultValue");
+    expect(useRemoteConfigVariables().value).toHaveLength(2);
   });
 });

@@ -1,3 +1,4 @@
+import type { ComputedRef } from "vue";
 import { createAbby } from "../src";
 
 const OLD_ENV = process.env;
@@ -33,12 +34,14 @@ describe("useAbby", () => {
     });
 
     const test1Result = useAbby("test");
-    assertType<"ONLY_ONE_VARIANT">(test1Result.variant);
-    expect(test1Result.variant).toBeDefined();
+    assertType<ComputedRef<"ONLY_ONE_VARIANT">>(test1Result.variant);
+    expect(test1Result.variant.value).toBeDefined();
 
     const test2Result = useAbby("test2");
-    assertType<(typeof test2Variants)[number]>(test2Result.variant);
-    expect(test2Result.variant).toBeDefined();
+    assertType<ComputedRef<(typeof test2Variants)[number]>>(
+      test2Result.variant
+    );
+    expect(test2Result.variant.value).toBeDefined();
   });
 });
 
@@ -52,7 +55,7 @@ describe("useFeatureFlag", () => {
     });
 
     const testFlagResult = useFeatureFlag("test");
-    expectTypeOf(testFlagResult).toEqualTypeOf<boolean>();
+    expectTypeOf(testFlagResult).toEqualTypeOf<ComputedRef<boolean>>();
     expectTypeOf(useFeatureFlag).parameter(0).toEqualTypeOf<"test">();
   });
 
@@ -97,8 +100,10 @@ describe("useRemoteConfig", () => {
     const numberRcResult = useRemoteConfig("numberRc");
     const jsonRcResult = useRemoteConfig("jsonRc");
 
-    expectTypeOf(stringRcResult).toEqualTypeOf<string>();
-    expectTypeOf(numberRcResult).toEqualTypeOf<number>();
-    expectTypeOf(jsonRcResult).toEqualTypeOf<Record<string, unknown>>();
+    expectTypeOf(stringRcResult).toEqualTypeOf<ComputedRef<string>>();
+    expectTypeOf(numberRcResult).toEqualTypeOf<ComputedRef<number>>();
+    expectTypeOf(jsonRcResult).toEqualTypeOf<
+      ComputedRef<Record<string, unknown>>
+    >();
   });
 });

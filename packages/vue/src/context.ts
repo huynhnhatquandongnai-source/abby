@@ -14,9 +14,11 @@ import type { AbbyDevtoolProps, DevtoolsFactory } from "@tryabby/devtools";
 import {
   type App,
   type Component,
+  type ComputedRef,
   type InjectionKey,
   type PropType,
   type ShallowRef,
+  computed,
   defineComponent,
   getCurrentInstance,
   inject,
@@ -119,14 +121,14 @@ export function createAbby<
     defaultDataRef.value = newData;
   });
 
-  const useAbbyData = (): AbbyProjectData => {
+  const useAbbyDataRef = (): ShallowRef<AbbyProjectData> => {
     if (getCurrentInstance()) {
       const injected = inject(AbbySymbol, null);
       if (injected) {
-        return injected.value;
+        return injected;
       }
     }
-    return defaultDataRef.value;
+    return defaultDataRef;
   };
 
   const useAbby = <
@@ -140,60 +142,72 @@ export function createAbby<
     name: K,
     lookupObject?: Lookup
   ): {
-    variant: ABTestReturnValue<Lookup, TestVariant>;
+    variant: ComputedRef<ABTestReturnValue<Lookup, TestVariant>>;
     onAct: () => void;
   } => {
-    const data = useAbbyData();
-    const selectedVariant =
-      data.tests[name as unknown as TestName]?.selectedVariant ??
+    const dataRef = useAbbyDataRef();
+    const resolveSelectedVariant = () =>
+      dataRef.value.tests[name as unknown as TestName]?.selectedVariant ??
       abby.getTestVariant(name) ??
       "";
 
-    if (name && selectedVariant) {
+    const initialSelectedVariant = resolveSelectedVariant();
+
+    if (name && initialSelectedVariant) {
       HttpService.sendData({
         url: config.apiUrl,
         type: AbbyEventType.PING,
         data: {
           projectId: config.projectId,
-          selectedVariant,
+          selectedVariant: initialSelectedVariant,
           testName: name as string,
         },
       });
     }
 
     const onAct = () => {
-      if (!selectedVariant) return;
+      const currentVariant = resolveSelectedVariant();
+      if (!currentVariant) return;
 
       HttpService.sendData({
         url: config.apiUrl,
         type: AbbyEventType.ACT,
         data: {
           projectId: config.projectId,
-          selectedVariant,
+          selectedVariant: currentVariant,
           testName: name as string,
         },
       });
     };
 
+    const variant = computed<ABTestReturnValue<Lookup, TestVariant>>(() => {
+      const selectedVariant = resolveSelectedVariant();
+      return lookupObject
+        ? (lookupObject[selectedVariant as TestVariant] as any)
+        : (selectedVariant as any);
+    });
+
     return {
       onAct,
-      variant: lookupObject
-        ? lookupObject[selectedVariant as TestVariant]
-        : (selectedVariant as any),
+      variant,
     };
   };
 
-  const useFeatureFlag = (name: FlagName): boolean => {
-    const data = useAbbyData();
-    return data.flags[name].value;
+  const useFeatureFlag = (name: FlagName): ComputedRef<boolean> => {
+    const dataRef = useAbbyDataRef();
+    return computed(() => dataRef.value.flags[name].value);
   };
 
-  const useFeatureFlags = () => {
-    const data = useAbbyData();
-    return (Object.keys(data.flags) as Array<FlagName>).map((flagName) => ({
-      name: flagName,
-      value: data.flags[flagName].value,
-    }));
+  const useFeatureFlags = (): ComputedRef<
+    Array<{ name: FlagName; value: boolean }>
+  > => {
+    const dataRef = useAbbyDataRef();
+    return computed(() =>
+      (Object.keys(dataRef.value.flags) as Array<FlagName>).map((flagName) => ({
+        name: flagName,
+        value: dataRef.value.flags[flagName].value,
+      }))
+    );
   };
 
   const useRemoteConfig = <
@@ -201,23 +215,34 @@ export function createAbby<
     Config extends RemoteConfig[T],
   >(
     remoteConfigName: T
-  ): RemoteConfigValueStringToType<Config> => {
-    const data = useAbbyData();
-    return data.remoteConfig[remoteConfigName]
-      .value as RemoteConfigValueStringToType<Config>;
+  ): ComputedRef<RemoteConfigValueStringToType<Config>> => {
+    const dataRef = useAbbyDataRef();
+    return computed(
+      () =>
+        dataRef.value.remoteConfig[remoteConfigName]
+          .value as RemoteConfigValueStringToType<Config>
+    );
   };
 
-  const useRemoteConfigVariables = () => {
-    const data = useAbbyData();
-    return (Object.keys(data.remoteConfig) as Array<RemoteConfigName>).map(
-      (configName) => ({
-        name: configName,
-        value: data.remoteConfig[configName].value,
-      })
-    ) as Array<{
+  const useRemoteConfigVariables = (): ComputedRef<
+    Array<{
       name: RemoteConfigName;
       value: RemoteConfigValueStringToType<RemoteConfig[RemoteConfigName]>;
-    }>;
+    }>
+  > => {
+    const dataRef = useAbbyDataRef();
+    return computed(
+      () =>
+        (Object.keys(dataRef.value.remoteConfig) as Array<RemoteConfigName>).map(
+          (configName) => ({
+            name: configName,
+            value: dataRef.value.remoteConfig[configName].value,
+          })
+        ) as Array<{
+          name: RemoteConfigName;
+          value: RemoteConfigValueStringToType<RemoteConfig[RemoteConfigName]>;
+        }>
+    );
   };
 
   const AbbyProvider = defineComponent({
